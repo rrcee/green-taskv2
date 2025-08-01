@@ -1,0 +1,628 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Green Task App</title>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope" rel="stylesheet">
+    <style>
+        :root {
+            font-size: clamp(0.9rem, 1.5vw + 0.7rem, 1.4rem);
+        }
+
+        @keyframes bg-move {
+            from { background-position-y: bottom; }
+            to   { background-position-y: 70%; }
+        }
+
+        @keyframes glow-pulse {
+            0%, 100% { box-shadow: 0 0 15px rgba(255, 255, 255, 0.5); }
+            50% { box-shadow: 0 0 25px rgba(255, 255, 255, 0.7); }
+        }
+
+        @keyframes underline {
+            0% { width: 0; }
+            100% { width: 100%; }
+        }
+
+        @keyframes particle {
+            0% { transform: translate(0, 0); opacity: 0.5; }
+            50% { transform: translate(var(--x), var(--y)); opacity: 0.8; }
+            100% { transform: translate(0, 0); opacity: 0.5; }
+        }
+
+        @keyframes slide-in {
+            0% { transform: translateY(20px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes fade-in {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fade-out {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-10px); }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: rgb(2, 6, 23);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-family: "Manrope", sans-serif;
+            background-image: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url('https://i.ibb.co/ZpTYhmfq/tulip.jpg');
+            background-size: cover;
+            background-position: bottom;
+            animation: bg-move 20s ease-in-out infinite alternate;
+            overflow: auto;
+            filter: brightness(0.8);
+            position: relative;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 450px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            z-index: 1;
+        }
+
+        .start-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            text-align: center;
+            animation: fade-in 0.5s ease forwards;
+        }
+
+        .start-screen.hidden {
+            animation: fade-out 0.5s ease forwards;
+            display: none;
+        }
+
+        .start-screen h1 {
+            font-size: 2em;
+            font-weight: normal;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .start-screen h1::after {
+            content: '';
+            position: absolute;
+            bottom: -0.2em;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(to right, transparent, #a8e063);
+            animation: underline 2s ease-in-out infinite;
+        }
+
+        .start-screen p {
+            font-size: 1em;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .start-screen button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            backdrop-filter: url(#liquid-glass) blur(3px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: transform 0.2s ease, background 0.3s ease;
+            font-family: "Manrope", sans-serif;
+        }
+
+        .start-screen button:hover {
+            background: rgba(0, 0, 0, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .start-screen button:focus {
+            outline: none;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .task-screen {
+            display: none;
+        }
+
+        .task-screen.active {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            animation: fade-in 0.5s ease forwards;
+        }
+
+        h1 {
+            font-size: 1.6em;
+            font-weight: normal;
+            text-align: center;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        h1::after {
+            content: '';
+            position: absolute;
+            bottom: -0.2em;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(to right, transparent, #a8e063);
+            animation: underline 2s ease-in-out infinite;
+        }
+
+        .task-box {
+            width: 100%;
+            aspect-ratio: 3 / 4;
+            position: relative;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            backdrop-filter: url(#liquid-glass) blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s ease;
+        }
+
+        .task-box:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+        }
+
+        .task-box:hover .eco-tip {
+            display: block;
+        }
+
+        .task-box.glow-gardening {
+            animation: glow-pulse 2s infinite;
+            box-shadow: 0 0 15px rgba(46, 204, 113, 0.5);
+        }
+
+        .task-box.glow-water {
+            animation: glow-pulse 2s infinite;
+            box-shadow: 0 0 15px rgba(52, 152, 219, 0.5);
+        }
+
+        .task-box.glow-recycling {
+            animation: glow-pulse 2s infinite;
+            box-shadow: 0 0 15px rgba(241, 196, 15, 0.5);
+        }
+
+        .task-box.glow-energy {
+            animation: glow-pulse 2s infinite;
+            box-shadow: 0 0 15px rgba(231, 76, 60, 0.5);
+        }
+
+        .task-box.glow-lowwaste {
+            animation: glow-pulse 2s infinite;
+            box-shadow: 0 0 15px rgba(155, 89, 182, 0.5);
+        }
+
+        #task {
+            font-size: 1.1em;
+            text-align: center;
+            color: #fff;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+            animation: slide-in 0.5s ease forwards;
+        }
+
+        .eco-tip {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            border-radius: 5px;
+            padding: 0.5rem;
+            font-size: 0.8em;
+            color: #fff;
+            text-align: center;
+            width: 80%;
+            z-index: 2;
+            animation: slide-in 0.5s ease forwards;
+        }
+
+        .controls {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        select, button {
+            padding: 0.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            backdrop-filter: url(#liquid-glass) blur(3px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: transform 0.2s ease, background 0.3s ease;
+            font-family: "Manrope", sans-serif;
+        }
+
+        select:hover, button:hover {
+            background: rgba(0, 0, 0, 0.4);
+            transform: translateY(-2px);
+        }
+
+        select:focus, button:focus {
+            outline: none;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        option {
+            color: #fff;
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        .credits {
+            font-size: 0.7em;
+            color: #fff;
+            text-align: center;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+            margin-top: 0.5rem;
+        }
+
+        .particle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: particle 6s ease-in-out infinite;
+            z-index: 0;
+        }
+
+        .particle.gardening { background: rgba(46, 204, 113, 0.5); }
+        .particle.water { background: rgba(52, 152, 219, 0.5); }
+        .particle.recycling { background: rgba(241, 196, 15, 0.5); }
+        .particle.energy { background: rgba(231, 76, 60, 0.5); }
+        .particle.lowwaste { background: rgba(155, 89, 182, 0.5); }
+
+        @media (max-width: 600px) {
+            .container, .start-screen {
+                max-width: 90%;
+            }
+            .task-box {
+                font-size: 0.8rem;
+            }
+            h1 {
+                font-size: 1.4em;
+            }
+            .eco-tip {
+                font-size: 0.7em;
+                width: 90%;
+            }
+            .start-screen h1 {
+                font-size: 1.8em;
+            }
+            .start-screen p {
+                font-size: 0.9em;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .container, .start-screen {
+                max-width: 500px;
+            }
+            h1 {
+                font-size: 1.8em;
+            }
+            #task {
+                font-size: 1.2em;
+            }
+            .start-screen h1 {
+                font-size: 2.2em;
+            }
+            .start-screen p {
+                font-size: 1.1em;
+            }
+        }
+
+        body > svg {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <svg width="0" height="0" color-interpolation-filters="sRGB">
+        <filter id="liquid-glass" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur"/>
+            <feSpecularLighting result="spec" in="blur" surfaceScale="5" specularConstant="0.75" specularExponent="20">
+                <fePointLight x="-500" y="-500" z="200"/>
+            </feSpecularLighting>
+            <feComposite in="spec" in2="SourceGraphic" operator="over" result="lit"/>
+            <feColorMatrix in="lit" type="matrix" values="
+                1 0 0 0 0.2
+                0 1 0 0 0.2
+                0 0 1 0 0.2
+                0 0 0 0.5 0"/>
+        </filter>
+    </svg>
+
+    <div class="start-screen container" id="startScreen">
+        <h1>Green Task</h1>
+        <p>Discover eco-friendly tasks to make a positive impact on the planet!</p>
+        <button id="startButton">Start</button>
+    </div>
+
+    <div class="task-screen container" id="taskScreen">
+        <h1>Green Task</h1>
+        <div class="task-box">
+            <div id="task">Click "Generate Task" to get started!</div>
+            <div class="eco-tip" id="ecoTip"></div>
+        </div>
+        <div class="controls">
+            <select id="categorySelect">
+                <option value="all">All Categories</option>
+                <option value="gardening">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 5px;">
+                        <path d="M12 21s-9-4.5-9-12a9 9 0 0 1 18 0c0 7.5-9 12-9 12z"></path>
+                        <circle cx="12" cy="9" r="3"></circle>
+                    </svg>
+                    Gardening
+                </option>
+                <option value="water">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 5px;">
+                        <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path>
+                        <path d="M12 6c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4z"></path>
+                    </svg>
+                    Water Conservation
+                </option>
+                <option value="recycling">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 5px;">
+                        <path d="M3 6h18"></path>
+                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                        <path d="M10 11v6"></path>
+                        <path d="M14 11v6"></path>
+                    </svg>
+                    Recycling
+                </option>
+                <option value="energy">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 5px;">
+                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+                    </svg>
+                    Energy Saving
+                </option>
+                <option value="lowwaste">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 5px;">
+                        <path d="M12 2a10 10 0 0 0-10 10c0 5.5 4.5 10 10 10s10-4.5 10-10S17.5 2 12 2z"></path>
+                        <path d="M12 6v12"></path>
+                        <path d="M6 12h12"></path>
+                    </svg>
+                    Low Waste
+                </option>
+            </select>
+            <button id="generateTask">Generate Task</button>
+        </div>
+        <div class="credits">Made by Rishi Rohith</div>
+    </div>
+
+    <script>
+        const tasks = {
+            gardening: [
+                "Plant a tree in your backyard",
+                "Start a compost bin for organic waste",
+                "Grow your own herbs",
+                "Create a pollinator-friendly garden",
+                "Mulch your garden beds",
+                "Install a drip irrigation system",
+                "Plant native species to support local wildlife",
+                "Build a raised garden bed",
+                "Use organic fertilizers instead of synthetic ones",
+                "Create a vertical garden for small spaces",
+                "Start a community garden",
+                "Grow edible flowers like nasturtiums",
+                "Prune plants to encourage growth",
+                "Use companion planting to deter pests",
+                "Harvest seeds for next season"
+            ],
+            water: [
+                "Fix a leaky faucet",
+                "Install a rain barrel",
+                "Use a broom instead of a hose to clean driveways",
+                "Take shorter showers",
+                "Water plants early in the morning",
+                "Install low-flow showerheads",
+                "Collect rainwater for household use",
+                "Use mulch to retain soil moisture",
+                "Check for and repair toilet leaks",
+                "Run dishwashers only when full",
+                "Install a dual-flush toilet valve",
+                "Use a bucket to wash your car",
+                "Choose drought-resistant plants",
+                "Reuse greywater for irrigation",
+                "Monitor your water bill for leaks"
+            ],
+            recycling: [
+                "Set up a recycling station at home",
+                "Repurpose old jars for storage",
+                "Donate unused clothes",
+                "Recycle electronics properly",
+                "Use reusable bags for shopping",
+                "Compost food scraps",
+                "Recycle batteries at a designated center",
+                "Upcycle old furniture",
+                "Use paper bags instead of plastic",
+                "Participate in a local recycling program",
+                "Recycle glass bottles and jars",
+                "Separate recyclables correctly",
+                "Donate old books to libraries",
+                "Use a scrap paper notebook",
+                "Recycle aluminum cans"
+            ],
+            energy: [
+                "Switch to LED bulbs",
+                "Unplug devices when not in use",
+                "Use a programmable thermostat",
+                "Air dry clothes instead of using a dryer",
+                "Turn off lights when leaving a room",
+                "Insulate your home to reduce heating costs",
+                "Use energy-efficient appliances",
+                "Install solar panels if feasible",
+                "Use power strips to reduce phantom loads",
+                "Optimize home ventilation for efficiency",
+                "Use ceiling fans to reduce AC use",
+                "Seal windows to prevent drafts",
+                "Switch to a renewable energy provider",
+                "Use motion-sensor lights outdoors",
+                "Clean refrigerator coils for efficiency"
+            ],
+            lowwaste: [
+                "Use a reusable water bottle",
+                "Switch to bamboo toothbrushes",
+                "Buy in bulk to reduce packaging",
+                "Use cloth napkins instead of paper",
+                "Shop at a local farmer's market",
+                "Carry reusable cutlery",
+                "Use bar soap instead of liquid soap",
+                "Make homemade cleaning products",
+                "Repair items instead of replacing them",
+                "Choose products with minimal packaging",
+                "Use reusable coffee filters",
+                "Switch to cloth diapers if applicable",
+                "Bring your own containers to stores",
+                "Avoid single-use plastics",
+                "Use beeswax wraps instead of plastic wrap"
+            ]
+        };
+
+        const ecoTips = [
+            "Composting reduces landfill waste by up to 30%.",
+            "LED bulbs use 75% less energy than incandescent bulbs.",
+            "A single dripping faucet can waste 20 gallons of water daily.",
+            "Recycling one ton of paper saves 17 trees.",
+            "Native plants require less water and maintenance.",
+            "Solar panels can reduce your carbon footprint significantly.",
+            "Reusable bags can save thousands of plastic bags over time."
+        ];
+
+        const startScreen = document.getElementById('startScreen');
+        const taskScreen = document.getElementById('taskScreen');
+        const startButton = document.getElementById('startButton');
+        const taskBox = document.querySelector('.task-box');
+        const taskElement = document.getElementById('task');
+        const ecoTipElement = document.getElementById('ecoTip');
+        const categorySelect = document.getElementById('categorySelect');
+        const generateTaskButton = document.getElementById('generateTask');
+
+        function generateTask() {
+            const category = categorySelect.value;
+            let taskList = [];
+            if (category === 'all') {
+                taskList = Object.values(tasks).flat();
+            } else {
+                taskList = tasks[category];
+            }
+            const randomTask = taskList[Math.floor(Math.random() * taskList.length)];
+            taskElement.textContent = randomTask;
+            ecoTipElement.textContent = ecoTips[Math.floor(Math.random() * ecoTips.length)];
+            taskBox.className = 'task-box';
+            if (category !== 'all') {
+                taskBox.classList.add(`glow-${category}`);
+            }
+        }
+
+        function createParticle() {
+            const particle = document.createElement('div');
+            particle.classList.add('particle');
+            const categories = ['gardening', 'water', 'recycling', 'energy', 'lowwaste'];
+            const randomCategory = categories[Math.floor(Math.random() * categories.length)];
+            particle.classList.add(randomCategory);
+            const maxX = window.innerWidth - 8;
+            const maxY = window.innerHeight - 8;
+            const startX = Math.random() * maxX;
+            const startY = Math.random() * maxY;
+            particle.style.left = `${startX}px`;
+            particle.style.top = `${startY}px`;
+            particle.style.setProperty('--x', `${(Math.random() - 0.5) * 100}px`);
+            particle.style.setProperty('--y', `${(Math.random() - 0.5) * 100}px`);
+            particle.style.animationDelay = `${Math.random() * 3}s`;
+            document.body.appendChild(particle);
+            setTimeout(() => particle.remove(), 6000);
+        }
+
+        startButton.addEventListener('click', () => {
+            startScreen.classList.add('hidden');
+            setTimeout(() => {
+                startScreen.style.display = 'none';
+                taskScreen.classList.add('active');
+            }, 500); // Match fade-out duration
+        });
+
+        generateTaskButton.addEventListener('click', generateTask);
+        setInterval(createParticle, 500);
+    </script>
+</body>
+</html>
